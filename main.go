@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -34,37 +33,27 @@ type Model struct {
 	count     int
 }
 
-func ParseLine(line string) (Instance, error) {
+func ParseLine(line string) (*Instance, error) {
 	tmp := strings.Split(strings.TrimSpace(line), " ")
 	if len(tmp) < 2 {
-		return Instance{}, errors.New("Invalid line")
+		return nil, errors.New("Invalid line")
 	}
 
 	label, err := strconv.ParseInt(tmp[0], 10, 32)
-	if enum, ok := err.(*strconv.NumError); ok {
-		switch enum.Err {
-		case strconv.ErrRange:
-			log.Fatal("Bad Range Error")
-		case strconv.ErrSyntax:
-			log.Fatal("Syntax Error")
-		}
+	if err != nil {
+		return nil, err
 	}
 
 	features := make(map[int]float64)
 	for _, v := range tmp[1:] {
 		tmp := strings.Split(v, ":")
 		n, err := strconv.ParseFloat(tmp[1], 64)
-		if enum, ok := err.(*strconv.NumError); ok {
-			switch enum.Err {
-			case strconv.ErrRange:
-				log.Fatal("Bad Range Error")
-			case strconv.ErrSyntax:
-				log.Fatal("Syntax Error")
-			}
+		if err != nil {
+			return nil, err
 		}
 		features[GetId(tmp[0])] = n
 	}
-	return Instance{int(label), features}, nil
+	return &Instance{int(label), features}, nil
 }
 
 func GetAccuracy(gold []int, predict []int) float64 {
@@ -146,7 +135,7 @@ func ReadData(r *bufio.Reader) []Instance {
 	for e == nil {
 		instance, err := ParseLine(s)
 		if err == nil { // skip invalid line
-			result = append(result, instance)
+			result = append(result, *instance)
 		}
 		s, e = Readln(r)
 	}
