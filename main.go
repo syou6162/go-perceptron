@@ -167,13 +167,28 @@ func main() {
 			model.Learn(instance)
 		}
 
-		trainPredicts := make([]int, 0, 0)
-		for _, instance := range train {
-			trainPredicts = append(trainPredicts, model.Predict(instance.features))
+		trainPredicts := make([]int, len(train))
+		sem := make(chan struct{}, len(train))
+		for i, instance := range train {
+			go func(i int, instance Instance) {
+				trainPredicts[i] = model.Predict(instance.features)
+				sem <- struct{}{}
+			}(i, instance)
 		}
-		testPredicts := make([]int, 0, 0)
-		for _, instance := range test {
-			testPredicts = append(testPredicts, model.Predict(instance.features))
+		for i := 0; i < len(train); i++ {
+			<-sem
+		}
+
+		testPredicts := make([]int, len(test))
+		sem = make(chan struct{}, len(test))
+		for i, instance := range test {
+			go func(i int, instance Instance) {
+				testPredicts[i] = model.Predict(instance.features)
+				sem <- struct{}{}
+			}(i, instance)
+		}
+		for i := 0; i < len(test); i++ {
+			<-sem
 		}
 
 		fmt.Printf("%d\t%0.3f\t%0.3f\n", iter, GetAccuracy(trainGolds, trainPredicts), GetAccuracy(testGolds, testPredicts))
